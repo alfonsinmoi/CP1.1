@@ -32,7 +32,7 @@ pipeline {
                 sh '''
                     # Iniciar Flask
                     export FLASK_APP=${WORKSPACE}/app/api.py
-                    python3 -m flask run --host=0.0.0.0 --port=5000 &
+                    python3 -m flask run --host=0.0.0.0 --port=5050 &
                     FLASK_PID=$!
 
                     # Iniciar Wiremock
@@ -43,7 +43,7 @@ pipeline {
                     # en lugar de usar sleep fijo que puede fallar en sistemas lentos
                     echo "Esperando a que Flask este listo..."
                     for i in $(seq 1 30); do
-                        if curl -s http://localhost:5000/ > /dev/null 2>&1; then
+                        if curl -s http://localhost:5050/ > /dev/null 2>&1; then
                             echo "Flask listo despues de $i intentos"
                             break
                         fi
@@ -60,7 +60,7 @@ pipeline {
                     done
 
                     # Verificar que ambos servicios estan funcionando
-                    curl -s http://localhost:5000/ || (echo "ERROR: Flask no responde" && exit 1)
+                    curl -s http://localhost:5050/ || (echo "ERROR: Flask no responde" && exit 1)
                     curl -s http://localhost:9090/__admin/ || (echo "ERROR: Wiremock no responde" && exit 1)
 
                     # Ejecutar tests
