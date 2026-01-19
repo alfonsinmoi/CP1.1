@@ -5,7 +5,7 @@ pipeline {
         stage('Get Code') {
             steps {
                 // Obtener codigo del repositorio
-                git 'https://github.com/anieto-unir/helloworld.git'
+                git 'https://github.com/alfonsinmoi/CP1.1.git'
                 echo "WORKSPACE: ${WORKSPACE}"
                 sh 'ls -la'
             }
