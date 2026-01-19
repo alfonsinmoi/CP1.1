@@ -22,7 +22,7 @@ pipeline {
             steps {
                 sh '''
                     export PYTHONPATH=${WORKSPACE}
-                    pytest --junitxml=result-unit.xml test/unit/
+                    python3 -m pytest --junitxml=result-unit.xml test/unit/
                 '''
             }
         }
@@ -32,7 +32,7 @@ pipeline {
                 sh '''
                     # Iniciar Flask
                     export FLASK_APP=${WORKSPACE}/app/api.py
-                    flask run --host=0.0.0.0 --port=5000 &
+                    python3 -m flask run --host=0.0.0.0 --port=5000 &
                     FLASK_PID=$!
 
                     # Iniciar Wiremock
@@ -65,7 +65,7 @@ pipeline {
 
                     # Ejecutar tests
                     export PYTHONPATH=${WORKSPACE}
-                    pytest --junitxml=result-rest.xml test/rest/
+                    python3 -m pytest --junitxml=result-rest.xml test/rest/
                 '''
             }
         }
@@ -75,7 +75,7 @@ pipeline {
         always {
             junit 'result*.xml'
             sh '''
-                pkill -f "flask run" || true
+                pkill -f "flask" || true
                 pkill -f "wiremock" || true
             '''
         }
