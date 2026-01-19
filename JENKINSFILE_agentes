@@ -1,0 +1,98 @@
+pipeline {
+    agent none
+
+    stages {
+        stage('Get Code') {
+            agent { label 'agent1' }
+            steps {
+                // Obtener codigo del repositorio
+                git 'https://github.com/anieto-unir/helloworld.git'
+                echo "WORKSPACE: ${WORKSPACE}"
+                sh '''
+                    whoami
+                    hostname
+                    echo "WORKSPACE: ${WORKSPACE}"
+                    ls -la
+                '''
+                stash name: 'code', includes: '**/*'
+            }
+        }
+
+        stage('Tests') {
+            parallel {
+                stage('Unit Tests') {
+                    agent { label 'agent2' }
+                    steps {
+                        unstash 'code'
+                        sh '''
+                            whoami
+                            hostname
+                            echo "WORKSPACE: ${WORKSPACE}"
+                        '''
+                        sh '''
+                            export PYTHONPATH=${WORKSPACE}
+                            pytest --junitxml=result-unit.xml test/unit/
+                        '''
+                        stash name: 'unit-results', includes: 'result-unit.xml'
+                    }
+                }
+
+                stage('Rest Tests') {
+                    agent { label 'agent3' }
+                    steps {
+                        unstash 'code'
+                        sh '''
+                            whoami
+                            hostname
+                            echo "WORKSPACE: ${WORKSPACE}"
+                        '''
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            sh '''
+                                export FLASK_APP=${WORKSPACE}/app/api.py
+                                flask run --host=0.0.0.0 --port=5000 &
+                                export FLASK_PID=$!
+                                sleep 5
+
+                                java -jar /Users/macminimoi/wiremock/wiremock-standalone-3.10.0.jar --port 9090 --root-dir ${WORKSPACE}/test/wiremock &
+                                export WIREMOCK_PID=$!
+                                sleep 5
+
+                                export PYTHONPATH=${WORKSPACE}
+                                pytest --junitxml=result-rest.xml test/rest/
+
+                                kill $FLASK_PID || true
+                                kill $WIREMOCK_PID || true
+                            '''
+                        }
+                        stash name: 'rest-results', includes: 'result-rest.xml', allowEmpty: true
+                    }
+                }
+            }
+        }
+
+        stage('Results') {
+            agent { label 'agent1' }
+            steps {
+                unstash 'unit-results'
+                unstash 'rest-results'
+                sh '''
+                    whoami
+                    hostname
+                    echo "WORKSPACE: ${WORKSPACE}"
+                '''
+                junit 'result*.xml'
+            }
+            post {
+                always {
+                    deleteDir()
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finalizado'
+        }
+    }
+}
